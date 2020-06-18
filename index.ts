@@ -1,6 +1,6 @@
 import Room from './models/room';
 
-import io from 'socket.io';
+import io, { Socket } from 'socket.io';
 import * as dotenv from 'dotenv';
 
 const Rooms = new Map<string, Room>();
@@ -10,8 +10,8 @@ const server = io(process.env['PORT'] || 3000, { transports: ['websocket'] });
 
 server.on('connection', socket => {
     socket.on('create', () => {
-        const rooms = Object.keys(socket.rooms);
-        if (rooms.length == 1) {
+        const rooms = getRooms(socket);
+        if (!rooms.length) {
             const room = new Room(socket.id);
             socket.join(room.id).emit('room', room.id);
             Rooms.set(room.id, room);
@@ -24,8 +24,8 @@ server.on('connection', socket => {
             socket.emit('exception', 'This room does not exist!');
         } else {
             const room = Rooms.get(code) as Room;
-            const rooms = Object.keys(socket.rooms);
-            if (rooms.length == 1) {
+            const rooms = getRooms(socket);
+            if (!rooms.length) {
                 if (room.connected.length < 4) {
                     room.connected.push(socket.id);
                     socket.join(room.id).emit('room', room.id);
@@ -37,23 +37,23 @@ server.on('connection', socket => {
     });
 
     socket.on('message', (message: string) => {
-        const rooms = Object.keys(socket.rooms);
-        if (rooms.length == 2 && message.trim()) {
-            server.to(rooms[1]).emit('message', {
+        const rooms = getRooms(socket);
+        if (rooms.length == 1 && message.trim()) {
+            server.to(rooms[0]).emit('message', {
                 content: message,
                 author: {
                     id: socket.id,
                     name: socket.id
                 }
             });
-        } else if (rooms.length == 1)
+        } else if (!rooms.length)
             socket.emit('exception', 'You are not connected to a room!');
     });
 
     socket.on('disconnecting', () => {
-        const rooms = Object.keys(socket.rooms);
-        if (rooms.length == 2 && Rooms.has(rooms[1])) {
-            const room = Rooms.get(rooms[1]) as Room;
+        const rooms = getRooms(socket);
+        if (rooms.length == 1 && Rooms.has(rooms[0])) {
+            const room = Rooms.get(rooms[0]) as Room;
             room.connected.splice(room.connected.indexOf(socket.id), 1);
 
             if (room.owner === socket.id) {
@@ -65,3 +65,7 @@ server.on('connection', socket => {
         }
     });
 });
+
+function getRooms(socket: Socket) {
+    return Object.keys(socket.rooms).filter(e => e !== socket.id);
+}
