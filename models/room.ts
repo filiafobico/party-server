@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+import seedrandom from 'seedrandom';
 
 export default class Room {
 
@@ -18,7 +18,7 @@ export default class Room {
     public readonly connected: Array<string> = [];
 
     constructor(key: string) {
-        this.id = crypto.createHmac('md5', key).update(String(Date.now())).digest('base64');
+        this.id = String(Math.abs(seedrandom(key).int32()));
         this.owner = key;
         this.connected.push(this.owner);
     }
