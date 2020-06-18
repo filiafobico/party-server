@@ -19,7 +19,7 @@ server.on('connection', socket => {
             socket.emit('exception', 'You are already connected to a room!');
     });
 
-    socket.on('join', code => {
+    socket.on('join', (code: string) => {
         if (!Rooms.has(code)) {
             socket.emit('exception', 'This room does not exist!');
         } else {
@@ -34,6 +34,20 @@ server.on('connection', socket => {
             } else
                 socket.emit('exception', 'You are already connected to a room!');
         }
+    });
+
+    socket.on('message', (message: string) => {
+        const rooms = Object.keys(socket.rooms);
+        if (rooms.length == 2 && message.trim()) {
+            server.to(rooms[1]).emit('message', {
+                content: message,
+                author: {
+                    id: socket.id,
+                    name: socket.id
+                }
+            });
+        } else if (rooms.length == 1)
+            socket.emit('exception', 'You are not connected to a room!');
     });
 
     socket.on('disconnecting', () => {
