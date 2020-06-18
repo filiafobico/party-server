@@ -27,8 +27,8 @@ server.on('connection', socket => {
             const rooms = Object.keys(socket.rooms);
             if (rooms.length == 1) {
                 if (room.connected.length < 4) {
-                    socket.join(room.id);
                     room.connected.push(socket.id);
+                    socket.join(room.id).emit('room', room.id);
                 } else
                     socket.emit('exception', 'This room is full!');
             } else
