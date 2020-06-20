@@ -1,4 +1,5 @@
 import seedrandom from 'seedrandom';
+import Member from './member';
 
 export default class Room {
 
@@ -10,17 +11,17 @@ export default class Room {
     /**
      * The owner's id of this room
      */
-    public readonly owner: string;
+    public readonly owner: Member;
 
     /**
      * A list of connected sockets to this room
      */
-    public readonly connected: Array<string> = [];
+    public readonly connected: Map<string, Member> = new Map();
 
-    constructor(key: string) {
-        this.id = String(Math.abs(seedrandom(key).int32()));
-        this.owner = key;
-        this.connected.push(this.owner);
+    constructor(owner: Member) {
+        this.owner = owner;
+        this.id = String(Math.abs(seedrandom(this.owner.id).int32()));
+        this.connected.set(this.owner.id, owner);
     }
 
 }
