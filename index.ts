@@ -23,7 +23,8 @@ server.on('connection', socket => {
                 const room = new Room(member);
 
                 Rooms.set(room.id, room);
-                socket.join(room.id).emit('join-room', room.id);
+                socket.join(room.id).emit('event', { name: 'join-room', data: room.id });
+                socket.emit('event', { name: 'member-list', data: [{ id: member.id, name: member.name }] });
             } else {
                 socket.emit('exception', 'You are already connected to a room!');
             }
@@ -42,8 +43,12 @@ server.on('connection', socket => {
             if (!member.room) {
                 if (room.connected.size < 4) {
                     room.connected.set(socket.id, member);
-                    server.to(room.id).emit('incomer-join', { id: member.id, name: member.name });
-                    socket.join(room.id).emit('join-room', room.id);
+                    server.to(room.id).emit('event', { name: 'incomer-join', data: { id: member.id, name: member.name } });
+                    socket.join(room.id).emit('event', { name: 'join-room', data: room.id });
+
+                    const members = Array.from(room.connected.values())
+                        .map(e => ({ id: e.id, name: e.name }));
+                    socket.emit('event', { name: 'member-list', data: members });
                 } else
                     socket.emit('exception', 'This room is full!');
             } else {
@@ -57,8 +62,12 @@ server.on('connection', socket => {
             const member = Members.get(socket.id) as Member;
 
             if (member.room && content.trim()) {
-                server.to(member.room)
-                    .emit('message', { member: { id: member.id, name: member.name }, content });
+                server.to(member.room).emit('event', {
+                    name: 'message',
+                    data: {
+                        member: { id: member.id, name: member.name }, content
+                    }
+                });
             }
         }
     });
@@ -80,7 +89,7 @@ server.on('connection', socket => {
                         server.sockets.connected[k].leave(room.id);
                     });
                 } else
-                    server.to(room.id).emit('incomer-left', { id: member.id, name: member.name });
+                    server.to(room.id).emit('event', { name: 'incomer-left', data: { id: member.id, name: member.name } });
             }
         }
     });
